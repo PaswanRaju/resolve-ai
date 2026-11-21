@@ -19,7 +19,7 @@ services:
       - path: .env
         required: false
     environment:
-      MONGO_URI: mongodb://mongo:27017
+      MONGO_URI: mongodb://mongo:27017/?directConnection=true
       REDIS_URL: redis://redis:6379/0
     depends_on:
       mongo:

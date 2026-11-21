@@ -1,5 +1,6 @@
 """FastAPI entry point."""
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,12 +9,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import Connections
-from app.routers import health
+from app.repositories.tickets import TicketRepository
+from app.routers import health, tickets
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    app.state.connections = Connections(get_settings())
+    conns = Connections(get_settings())
+    app.state.connections = conns
+    try:
+        await TicketRepository(conns.db).ensure_indexes()
+    except Exception as exc:  # keep starting so /health still answers; /health/ready shows why
+        logger.warning("Could not create MongoDB indexes: %s", exc)
     yield
     await app.state.connections.close()
 
@@ -28,6 +37,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health.router)
+    app.include_router(tickets.router)
     return app
 
 

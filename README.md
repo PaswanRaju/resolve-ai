@@ -61,15 +61,34 @@ resolve-ai/
 │   │   ├── main.py       App factory, CORS, startup/shutdown
 │   │   ├── config.py     Settings from environment variables
 │   │   ├── db.py         MongoDB and Redis connections
+│   │   ├── dependencies.py  Per-request dependencies (e.g. the ticket repository)
 │   │   ├── models/       Pydantic models (Ticket, WorkNote, ...)
-│   │   └── routers/      API routes (health, later tickets and agent)
-│   └── tests/            pytest suite
+│   │   ├── repositories/ All MongoDB queries, one class per collection
+│   │   └── routers/      API routes (health, tickets; later the agent)
+│   └── tests/            pytest suite (runs against a real MongoDB)
 ├── frontend/             Next.js app
-│   └── app/              Pages (App Router)
+│   ├── app/              Pages (App Router): /tickets, /tickets/new, /tickets/[number]
+│   └── lib/api.ts        Typed client for the backend (server-side only)
 ├── docker-compose.yml    Local stack: frontend, backend, mongo, redis
 ├── .env.example          Environment variables template
 └── .github/workflows/    CI pipeline
 ```
+
+## API
+
+Interactive docs at http://localhost:8000/docs once the backend is running.
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/tickets` | Open a ticket. Numbers are assigned in order: `INC0010001`, `INC0010002`, ... |
+| `GET` | `/tickets` | List tickets, newest first. Filters: `status`, `priority`, `q` (text search). Paging: `limit`, `skip` |
+| `GET` | `/tickets/{number}` | Get one ticket with its work notes |
+| `PATCH` | `/tickets/{number}` | Change status, priority, assignment group, etc. Only the fields sent are changed |
+| `POST` | `/tickets/{number}/work-notes` | Add a work note |
+| `POST` | `/tickets/{number}/resolve` | Resolve with resolution notes (at least 10 characters) |
+| `GET` | `/health`, `/health/ready` | Liveness, and readiness (MongoDB + Redis reachable) |
+
+Rules: closed tickets are read-only (`409`), a ticket can only be resolved through `/resolve` so it always has resolution notes, and resolving twice returns `409`.
 
 ## Local setup
 
@@ -100,7 +119,7 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-Tests and lint:
+Tests and lint (the ticket tests need MongoDB running, from `docker compose up -d mongo`):
 
 ```bash
 pytest
@@ -118,7 +137,7 @@ npm run dev
 ## Roadmap
 
 - [x] **1. Skeleton:** monorepo, Docker Compose, health checks, ticket models, CI
-- [ ] **2. Ticket CRUD:** create, list, update and resolve tickets, with work notes
+- [x] **2. Ticket CRUD:** create, list, update and resolve tickets, with work notes
 - [ ] **3. Synthetic data:** generate a realistic set of resolved IT tickets (no real company data)
 - [ ] **4. Embeddings + vector search:** embed tickets with Bedrock, index in Atlas Vector Search
 - [ ] **5. AI agent:** "Ask AI" endpoint and UI with cited suggestions
