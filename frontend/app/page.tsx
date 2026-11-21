@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Server component: runs on the Next.js server, so it can call the backend
 // by its Docker service name without exposing that URL to the browser.
 export const dynamic = "force-dynamic";
@@ -24,6 +26,11 @@ export default async function Home() {
       <p className="tagline">
         IT ticket portal with an AI agent that finds similar resolved tickets and suggests cited
         fixes.
+      </p>
+      <p>
+        <Link className="button" href="/tickets">
+          Go to tickets
+        </Link>
       </p>
 
       <section className="card">
